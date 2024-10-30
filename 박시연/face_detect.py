@@ -51,3 +51,5 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+#속도 테스트. resize 무조건 int만 먹음.
