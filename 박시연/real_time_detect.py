@@ -1,92 +1,92 @@
 import cv2
 import dlib
-import numpy as np
+import imutils
+from imutils import face_utils
 from scipy.spatial import distance as dist
 
-# EAR 계산 함수 정의
+
+# EAR를 계산하는 함수
 def eye_aspect_ratio(eye):
-    # 눈의 수직 거리
-    A = dist.euclidean(eye[1], eye[5])
-    B = dist.euclidean(eye[2], eye[4])
-    # 눈의 가로 거리
-    C = dist.euclidean(eye[0], eye[3])
-    # EAR 계산
-    ear = (A + B) / (2.0 * C)
+    p2_minus_p6 = dist.euclidean(eye[1], eye[5])
+    p3_minus_p5 = dist.euclidean(eye[2], eye[4])
+    p1_minus_p4 = dist.euclidean(eye[0], eye[3])
+    ear = (p2_minus_p6 + p3_minus_p5) / (2.0 * p1_minus_p4)
     return ear
 
-# 초기 변수 설정
-EYE_AR_THRESH = 0.3  # EAR 임계값
-EYE_AR_CONSEC_FRAMES = 48  # 졸음으로 인식하기 위한 프레임 연속 수
-counter = 0  # 프레임 카운터 초기화
-ALARM_ON = False  # 알람 상태 초기화
 
-# dlib의 얼굴 검출기와 랜드마크 예측기 로드
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+# 상수 및 변수 초기화
+FACIAL_LANDMARK_PREDICTOR = "shape_predictor_68_face_landmarks.dat"
+MINIMUM_EAR = 0.2  # EAR 임계값
+MAXIMUM_FRAME_COUNT = 10  # 졸음으로 간주할 연속 프레임 수
 
-# 좌/우 눈의 랜드마크 인덱스
-(lStart, lEnd) = (42, 48)
-(rStart, rEnd) = (36, 42)
+# dlib 얼굴 감지기 및 랜드마크 예측기 초기화
+faceDetector = dlib.get_frontal_face_detector()
+landmarkFinder = dlib.shape_predictor(FACIAL_LANDMARK_PREDICTOR)
 
-# 카메라 초기화
-cap = cv2.VideoCapture(0)
+# 웹캠 피드 가져오기
+webcamFeed = cv2.VideoCapture(0)
 
+# 눈의 랜드마크 인덱스 설정
+(leftEyeStart, leftEyeEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
+(rightEyeStart, rightEyeEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+# 졸음 감지 카운터 초기화
+EYE_CLOSED_COUNTER = 0
 
-    # 프레임을 회색조로 변환
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+try:
+    while True:
+        (status, image) = webcamFeed.read()
+        if not status:
+            break
 
-    # 얼굴 검출
-    faces = detector(gray, 0)
+        # 이미지 크기 조정 및 회색조 변환
+        image = imutils.resize(image, width=800)
+        grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    for face in faces:
-        # 랜드마크 검출
-        shape = predictor(gray, face)
-        shape = np.array([[p.x, p.y] for p in shape.parts()])
+        # 얼굴 검출
+        faces = faceDetector(grayImage, 0)
 
-        # 좌/우 눈 랜드마크 추출
-        leftEye = shape[lStart:lEnd]
-        rightEye = shape[rStart:rEnd]
+        for face in faces:
+            # 얼굴 랜드마크 찾기
+            faceLandmarks = landmarkFinder(grayImage, face)
+            faceLandmarks = face_utils.shape_to_np(faceLandmarks)
 
-        # 좌/우 눈 EAR 계산
-        leftEAR = eye_aspect_ratio(leftEye)
-        rightEAR = eye_aspect_ratio(rightEye)
+            # 왼쪽, 오른쪽 눈의 좌표 가져오기
+            leftEye = faceLandmarks[leftEyeStart:leftEyeEnd]
+            rightEye = faceLandmarks[rightEyeStart:rightEyeEnd]
 
-        # 평균 EAR 계산
-        ear = (leftEAR + rightEAR) / 2.0
+            # EAR 계산
+            leftEAR = eye_aspect_ratio(leftEye)
+            rightEAR = eye_aspect_ratio(rightEye)
+            ear = (leftEAR + rightEAR) / 2.0
 
-        # 눈 외곽선 그리기
-        leftEyeHull = cv2.convexHull(leftEye)
-        rightEyeHull = cv2.convexHull(rightEye)
-        cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
-        cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
+            # 눈 주위에 윤곽선 그리기
+            leftEyeHull = cv2.convexHull(leftEye)
+            rightEyeHull = cv2.convexHull(rightEye)
+            cv2.drawContours(image, [leftEyeHull], -1, (0, 255, 0), 1)
+            cv2.drawContours(image, [rightEyeHull], -1, (0, 255, 0), 1)
 
-        # EAR 임계값 비교
-        if ear < EYE_AR_THRESH:
-            counter += 1
-            # 연속된 프레임이 임계값을 초과하면 알람 상태로 설정
-            if counter >= EYE_AR_CONSEC_FRAMES:
-                if not ALARM_ON:
-                    ALARM_ON = True
-                    # 알람 소리 출력 (라즈베리파이에서 설정 필요)
-                    print("Drowsiness Alert!")  # 여기서 부저나 알람 소리를 추가 가능
-                cv2.putText(frame, "DROWSINESS ALERT!", (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        else:
-            counter = 0
-            ALARM_ON = False
+            # EAR 임계값 체크
+            if ear < MINIMUM_EAR:
+                EYE_CLOSED_COUNTER += 1
+            else:
+                EYE_CLOSED_COUNTER = 0
 
-    # 결과 프레임 표시
-    cv2.imshow("Drowsiness Detector", frame)
+            # EAR 값 출력
+            cv2.putText(image, f"EAR: {round(ear, 2)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-    # 'q' 키를 누르면 종료
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
+            # 졸음 경고
+            if EYE_CLOSED_COUNTER >= MAXIMUM_FRAME_COUNT:
+                cv2.putText(image, "Drowsiness Detected!", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-# 자원 해제
-cap.release()
-cv2.destroyAllWindows()
+        # 프레임 출력
+        cv2.imshow("Frame", image)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+except Exception as e:
+    print(f"Error: {e}")
+
+finally:
+    webcamFeed.release()
+    cv2.destroyAllWindows()
