@@ -85,7 +85,7 @@ try:
             break
 
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"Error! : {e}")
 
 finally:
     webcamFeed.release()
