@@ -77,7 +77,7 @@ try:
 
             # 졸음 경고
             if EYE_CLOSED_COUNTER >= MAXIMUM_FRAME_COUNT:
-                cv2.putText(image, "Drowsiness Detected!", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                cv2.putText(image, "Warning!", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         # 프레임 출력
         cv2.imshow("Frame", image)
