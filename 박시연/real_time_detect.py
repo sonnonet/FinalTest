@@ -17,7 +17,7 @@ def eye_aspect_ratio(eye):
 # 상수 및 변수 초기화
 FACIAL_LANDMARK_PREDICTOR = "shape_predictor_68_face_landmarks.dat"
 MINIMUM_EAR = 0.2  # EAR 임계값
-MAXIMUM_FRAME_COUNT = 10  # 졸음으로 간주할 연속 프레임 수
+MAXIMUM_FRAME_COUNT = 5  # 졸음으로 간주할 연속 프레임 수
 
 # dlib 얼굴 감지기 및 랜드마크 예측기 초기화
 faceDetector = dlib.get_frontal_face_detector()
