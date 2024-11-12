@@ -40,8 +40,6 @@ def read_co2():
 
 def parse_co2_data(data):
 
-    # 데이터 시트에 따라 데이터 형식이 다를 수 있습니다.
-    # 예시: data[3:5]에 CO₂ 농도 데이터가 있다고 가정하고 추출
     # 'big'은 빅 엔디안 형식으로 변환
     co2_ppm = int.from_bytes(data[3:5], byteorder='big')
     return co2_ppm
