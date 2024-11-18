@@ -1,27 +1,29 @@
-from sdk.api.message import Message
-from sdk.exceptions import CoolsmsException
+"""
+쿨에스엠에스 API를 이용한 SMS 서비스
+"""
+
 from dotenv import load_dotenv
+import auth
+import requests
 import os
 
-# 쿨에스엠에스 API를 이용한 SMS 서비스
+load_dotenv() # .env 파일
 
-load_dotenv()
+SMS_API_KEY = os.environ.get("SMS_API_KEY")
+SMS_API_SECRET = os.environ.get("SMS_API_SECRET")
 
-SMS_API_KEY = os.environ.get('SMS_API_KEY')
-SMS_API_SECRET = os.environ.get('SMS_API_SECRET')
+# API에 메시지 전송 요청
+def send(data):
+    requests.post("https://api.coolsms.co.kr/messages/v4/send",
+                  headers=auth.get_headers(SMS_API_KEY, SMS_API_SECRET),
+                  json=data)
 
-params = dict()
-params['type'] = 'sms'
-params['to'] = '받는사람 번호 ' # 받는 사람 번호
-params['from'] = '보내는 사람 번호' # 보내는 사람 번호
-params['text'] = '보낼 내용' # 내용
-
-cool = Message(SMS_API_KEY, SMS_API_SECRET)
-
-response = cool.send(params)
-print("성공 여부 : %s" % response['success_count'])
-print("실패 여부 : %s" % response['error_count'])
-
-if "error_list" in response:
-    print("에러 정보 : %s" % response['error_list'])
-
+if __name__ == "__main__":
+    params = dict()
+    params["message"] = dict()
+    params["message"]["to"] = "" # 받는 사람 번호
+    params["message"]["from"] = "" # 보내는 사람 번호
+    params["message"]["text"] = "test" # 내용
+    
+    send(params)
+    
