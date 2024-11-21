@@ -1,7 +1,3 @@
-"""
-REST API를 요청할 때 HTTP 헤더에 추가할 Authorization 정보
-"""
-
 import time
 import datetime
 import uuid
